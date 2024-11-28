@@ -1,1 +1,161 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galerie d'Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            padding: 20px;
+            background-color: #f4f4f4;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        #search-bar {
+            margin: 20px auto;
+            text-align: center;
+        }
+        #search-bar input {
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #search-bar button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+        }
+        .image-card {
+            border: 1px solid #ddd;
+            margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .image-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+        .download-btn {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Galerie d'images</h1>
+        <p>Toutes les images provenant de : <a href="https://github.com/Lost-Cyrano/image-self/tree/75c06af5babc20216da47a8f0adde2e9ac19a77b/image" target="_blank">GitHub Repository</a></p>
+    </header>
+    <div id="search-bar">
+        <input type="date" id="search-date" placeholder="Rechercher une date">
+        <button onclick="filterImages()">Rechercher</button>
+    </div>
+    <div id="gallery"></div>
+
+    <script>
+        // URL du répertoire GitHub contenant les images
+        const githubRepoUrl = "https://api.github.com/repos/Lost-Cyrano/image-self/contents/image";
+        const rawBaseUrl = "https://raw.githubusercontent.com/Lost-Cyrano/image-self/main/image";
+
+        // Conteneur de la galerie
+        const gallery = document.getElementById('gallery');
+
+        // Charger et afficher les images
+        async function loadImages() {
+            try {
+                // Appeler l'API GitHub pour obtenir la liste des fichiers
+                const response = await fetch(githubRepoUrl);
+                const files = await response.json();
+
+                // Filtrer uniquement les fichiers d'image (extensions reconnues)
+                const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file.name));
+
+                // Obtenir les métadonnées des images
+                const images = imageFiles.map(file => ({
+                    name: file.name,
+                    path: `${rawBaseUrl}/${file.name}`,
+                    date: new Date(file.commit?.author?.date || file.git_url) // Date fictive ou par défaut
+                }));
+
+                // Trier les images par date
+                images.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Afficher les images
+                displayImages(images);
+            } catch (error) {
+                console.error('Erreur lors du chargement des images:', error);
+            }
+        }
+
+        // Fonction pour afficher les images dans la galerie
+        function displayImages(images) {
+            gallery.innerHTML = '';
+            images.forEach(image => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+
+                card.innerHTML = `
+                    <img src="${image.path}" alt="${image.name}">
+                    <p>${new Date(image.date).toLocaleDateString()}</p>
+                    <a class="download-btn" href="${image.path}" download="${image.name}">Télécharger</a>
+                `;
+                gallery.appendChild(card);
+            });
+        }
+
+        // Fonction pour filtrer les images par date
+        function filterImages() {
+            const searchDate = document.getElementById('search-date').value;
+            if (!searchDate) {
+                alert('Veuillez sélectionner une date.');
+                return;
+            }
+
+            fetch(githubRepoUrl)
+                .then(response => response.json())
+                .then(files => {
+                    const imageFiles = files.filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file.name));
+                    const images = imageFiles.map(file => ({
+                        name: file.name,
+                        path: `${rawBaseUrl}/${file.name}`,
+                        date: new Date(file.commit?.author?.date || file.git_url)
+                    }));
+
+                    const filteredImages = images.filter(image =>
+                        new Date(image.date).toISOString().split('T')[0] === searchDate
+                    );
+
+                    displayImages(filteredImages);
+                })
+                .catch(error => console.error('Erreur lors du filtrage des images:', error));
+        }
+
+        // Charger les images au démarrage
+        loadImages();
+    </script>
+</body>
+</html>
